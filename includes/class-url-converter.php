@@ -349,6 +349,42 @@ class TRP_Url_Converter {
                 $new_url = str_replace( '/'.$current_slug.'/', '/'.$translated_slug.'/', $new_url );
             }
         }
+	    
+	/* fix cases when website uses lms and translates instructor's profile page 
+        for example: when current language is Russian, and we have instructor's page as: /ru/profile/instructor-name
+        this function returned /blog link for some reason for default language, this fixes this issue, for more details please contact me: arsenanai@gmail.com
+        */
+        //just use current profile page url to translate to other languages
+        $current_url = $_SERVER['REQUEST_URI'];
+        if(strpos($current_url,'profile/')){
+            $current_lang = $TRP_LANGUAGE;
+            //getting needed slugs
+            if(strpos($TRP_LANGUAGE,'_')){
+                $current_lang = $this->get_url_slug($TRP_LANGUAGE);
+            }
+            if(strpos($language,'_')){
+                $language = $this->get_url_slug($language);
+            }
+            $currentLanguageSlugLength = strlen($current_lang);
+            if(strcmp($language,$this->settings['default-language'])===0){
+                //just cutting current language code with slash from url
+                $current_url = substr($current_url,$currentLanguageSlugLength+1,strlen($current_url)-$currentLanguageSlugLength-1);
+                //add default language slug if necessary
+                if(isset( $this->settings['add-subdirectory-to-default-language'] ) && $this->settings['add-subdirectory-to-default-language'] == 'yes')
+                    $current_url = $language.$current_url;
+            }else{
+                if(strcmp($current_lang,$this->settings['default-language'])===0){
+                    $current_url = "/".$language.$current_url;
+                }
+                else{
+                    $current_url = "/".$language.substr($current_url,$currentLanguageSlugLength+1,strlen($current_url)-$currentLanguageSlugLength-1);
+                }
+            }
+            $new_url = $this->get_abs_home().$current_url;
+            //saving result into cache
+            wp_cache_set('get_url_for_language_' . $hash, $new_url, 'trp');
+            return $new_url;
+        }
 
         if ( empty( $new_url ) ) {
             $new_url = $url;
